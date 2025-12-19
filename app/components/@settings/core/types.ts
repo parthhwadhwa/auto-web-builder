@@ -6,18 +6,10 @@ export type SettingCategory = 'profile' | 'file_sharing' | 'connectivity' | 'sys
 export type TabType =
   | 'profile'
   | 'settings'
-  | 'notifications'
   | 'features'
   | 'data'
   | 'cloud-providers'
-  | 'local-providers'
-  | 'github'
-  | 'gitlab'
-  | 'netlify'
-  | 'vercel'
-  | 'supabase'
-  | 'event-logs'
-  | 'mcp';
+  | 'local-providers';
 
 export type WindowType = 'user' | 'developer';
 
@@ -69,18 +61,10 @@ export interface TabWindowConfig {
 export const TAB_LABELS: Record<TabType, string> = {
   profile: 'Profile',
   settings: 'Settings',
-  notifications: 'Notifications',
   features: 'Features',
   data: 'Data Management',
   'cloud-providers': 'Cloud Providers',
   'local-providers': 'Local Providers',
-  github: 'GitHub',
-  gitlab: 'GitLab',
-  netlify: 'Netlify',
-  vercel: 'Vercel',
-  supabase: 'Supabase',
-  'event-logs': 'Event Logs',
-  mcp: 'MCP Servers',
 };
 
 export const categoryLabels: Record<SettingCategory, string> = {

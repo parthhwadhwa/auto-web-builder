@@ -2,7 +2,6 @@ import type { WebContainer, WebContainerProcess } from '@webcontainer/api';
 import type { ITerminal } from '~/types/terminal';
 import { withResolvers } from './promises';
 import { atom } from 'nanostores';
-import { expoUrlAtom } from '~/lib/stores/qrCodeStore';
 
 export async function newShellProcess(webcontainer: WebContainer, terminal: ITerminal) {
   const args: string[] = [];
@@ -122,8 +121,8 @@ export class BoltShell {
     this.#process = process;
     this.#outputStream = commandStream.getReader();
 
-    // Start background Expo URL watcher immediately
-    this._watchExpoUrlInBackground(expoUrlStream);
+    // Start background processing
+    this._processExpoUrlStream(expoUrlStream);
 
     await this.waitTillOscCode('interactive');
     this.#initialized?.();
@@ -176,34 +175,12 @@ export class BoltShell {
     return { process, terminalStream: streamA, commandStream: streamC, expoUrlStream: streamD };
   }
 
-  // Dedicated background watcher for Expo URL
-  private async _watchExpoUrlInBackground(stream: ReadableStream<string>) {
+  // Background stream processor - simplified, no longer watching for Expo URLs
+  private async _processExpoUrlStream(stream: ReadableStream<string>) {
     const reader = stream.getReader();
-    let buffer = '';
-    const expoUrlRegex = /(exp:\/\/[^\s]+)/;
-
     while (true) {
-      const { value, done } = await reader.read();
-
-      if (done) {
-        break;
-      }
-
-      buffer += value || '';
-
-      const expoUrlMatch = buffer.match(expoUrlRegex);
-
-      if (expoUrlMatch) {
-        const cleanUrl = expoUrlMatch[1]
-          .replace(/[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g, '')
-          .replace(/[^\x20-\x7E]+$/g, '');
-        expoUrlAtom.set(cleanUrl);
-        buffer = buffer.slice(buffer.indexOf(expoUrlMatch[1]) + expoUrlMatch[1].length);
-      }
-
-      if (buffer.length > 2048) {
-        buffer = buffer.slice(-2048);
-      }
+      const { done } = await reader.read();
+      if (done) break;
     }
   }
 
@@ -289,20 +266,6 @@ export class BoltShell {
       const text = value || '';
       fullOutput += text;
       buffer += text; // <-- Accumulate in buffer
-
-      // Extract Expo URL from buffer and set store
-      const expoUrlMatch = buffer.match(expoUrlRegex);
-
-      if (expoUrlMatch) {
-        // Remove any trailing ANSI escape codes or non-printable characters
-        const cleanUrl = expoUrlMatch[1]
-          .replace(/[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g, '')
-          .replace(/[^\x20-\x7E]+$/g, '');
-        expoUrlAtom.set(cleanUrl);
-
-        // Remove everything up to and including the URL from the buffer to avoid duplicate matches
-        buffer = buffer.slice(buffer.indexOf(expoUrlMatch[1]) + expoUrlMatch[1].length);
-      }
 
       // Check if command completion signal with exit code
       const [, osc, , , code] = text.match(/\x1b\]654;([^\x07=]+)=?((-?\d+):(\d+))?\x07/) || [];
